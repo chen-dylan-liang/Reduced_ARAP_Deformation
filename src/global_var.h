@@ -21,6 +21,9 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/Dense>
 #include <Eigen/SVD>
+#include <Eigen/Dense>
+#include <Eigen/SparseCore>
+#include <Eigen/CholmodSupport>
 #include <igl/flip_avoiding_line_search.h>
 #include <igl/project.h>
 #include <igl/unproject.h>

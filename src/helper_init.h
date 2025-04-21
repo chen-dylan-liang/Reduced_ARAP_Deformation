@@ -9,6 +9,8 @@
 #define helper_init_h
 
 #include "global_var.h"
+#include <Eigen/CholmodSupport>
+#include <Eigen/SparseCholesky>
 #include <sstream>
 
 inline void processArgv(int argc, const char* argv[], string& input_name,int& itrs,int& func,int& method,bool& flip_avoid ,bool& print_txtfile,bool& print_vtkfile,bool& print_pic,bool& print_each_frame,bool& pause,bool& inf_itr,bool& show_texture,string& texture_name,double& lamda,string& slamda)

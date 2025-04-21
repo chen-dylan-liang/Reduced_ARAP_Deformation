@@ -9,6 +9,8 @@
 
 #define helper_algebra_h
 #include "global_var.h"
+#include <Eigen/CholmodSupport>
+#include <Eigen/SparseCholesky>
 
 MatrixXd getCovariance3x3(const vector<int>& neighbor,const MatrixXd& verts,const MatrixXd& now_res,const VectorXd& weights,int cur);
 

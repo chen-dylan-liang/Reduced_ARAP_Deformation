@@ -11,6 +11,11 @@
 #include "helper_geometry.h"
 #include "ARAP.h"
 #include "call_back.h"
+#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/SparseCore>
+#include <Eigen/SparseCholesky>
+template class Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>>;
 
 int main(int argc, const char * argv[]) {
     /*initialization*/
@@ -42,7 +47,7 @@ int main(int argc, const char * argv[]) {
     VectorXd weights;
     SparseMatrix<double> Laplace;
     Laplace.resize(vert_num,vert_num);
-    SimplicialLDLT<SparseMatrix<double> > dir_solver;
+    Eigen::SimplicialLDLT<SparseMatrix<double> > dir_solver;
     MatrixXd* R=NULL;
     vector<int> fix;
     vector<VectorXd> fix_vec;
@@ -130,7 +135,7 @@ int main(int argc, const char * argv[]) {
         viewer.data().set_texture(Red,Green,Blue);
         viewer.data().set_colors(RowVector3d(0.825,0.825,0.825));
         viewer.core().is_animating = true;
-        viewer.launch(true,false,"show_texture",256,256);
+        viewer.launch(false,"show_texture",256,256);
     }
     else{
     MatrixXd new_res(vert_num,2);
@@ -140,7 +145,8 @@ int main(int argc, const char * argv[]) {
         printFile(print_pic,print_vtkfile,print_txtfile,print_each_frame,now_itr,distortion,aread,angled,output_name,distortion_per_unit,aread_per_unit,angled_per_unit,half_edges,F,res,distortion_file);
         //global phase: given R, solve p'
         global_phase(R,half_edges,weights,fix,fix_vec,RHS,func,false,new_res,dir_solver);
-        if(flip_avoid) igl::flip_avoiding_line_search(F,res,new_res,E);
+        std::function<double(Eigen::MatrixXd&)> energy = E;
+        if(flip_avoid) igl::flip_avoiding_line_search(F,res,new_res,energy);
         else res=new_res;
         for(int i=0;i<fix.size();i++)
         fix_vec[i]=res.row(fix[i]).transpose();
@@ -200,7 +206,7 @@ int main(int argc, const char * argv[]) {
     viewer.data().face_based = true;
     viewer.data().set_vertices(res);
     viewer.data().set_colors(RowVector3d(1.0,0.9,0.2));
-    viewer.launch(true,false,"deformation",256,256);
+    viewer.launch(false,"deformation",256,256);
     if(R) delete[] R;
     if(neighbors) delete[] neighbors;
     return EXIT_SUCCESS;

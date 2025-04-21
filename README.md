@@ -2,7 +2,7 @@
 - Committed to 2024-2025 Spring/Summer Yale University CPSC 510.
 - Please do not cheat. For good of both of us.
 - Deformation is interactive.
-- Dependencies: Eigen3/igl(No core algorithms about ARAP are used. igl is only used for user interaction and flip avoid line searching.)/OpenGL/GLFW3/OpenCV
+- Dependencies: Eigen3, igl(No core algorithms about ARAP are used. igl is only used for user interaction and flip avoid line searching.), system-wide OpenGL, system-wide GLFW3, system-wide OpenCV, generated glad (https://glad.dav1d.de/, select opengl 4.1, core, loader).
 - Some code for user interaction (in call_back.h) adapted from https://github.com/alecjacobson/geometry-processing-deformation
 - image.h and image.cpp adapted from http://10.76.1.181/courses/training/mitF04/assignments/
 - Arguments for parameterization are like: '-function PARAM -input bunny.obj -iterations 4 -method Hybrid 1e-6 -print_pic -print_vtkfile -print_each_frame'

@@ -10,6 +10,11 @@
 
 #include "helper_algebra.h"
 #include "helper_geometry.h"
+#include "Eigen/Dense"
+#include "Eigen/Sparse"
+#include <Eigen/CholmodSupport>
+#include <Eigen/SparseCholesky>
+
 void getLaplace(const vector<HalfEdge>& half_edges,const VectorXd& weights,const vector<int>& fix, SparseMatrix<double>& Laplace,int func);
 
 void getRHS(MatrixXd* R,const vector<HalfEdge>& half_edges,const VectorXd& weights,const vector<int>& fix, const vector<VectorXd>& fix_vec,MatrixXd& RHS,int func,bool is_first);

@@ -9,6 +9,8 @@
 #define helper_geometry_h
 
 #include "global_var.h"
+#include <Eigen/CholmodSupport>
+#include <Eigen/SparseCholesky>
 
 void getNeighbors(const vector<HalfEdge>& half_edges, vector<int>* neighbors);
 
