@@ -1,9 +1,7 @@
-# ARAP_Parameterization_Deformation
-- Committed to 2020-2021 Spring/Summer Zhejiang University Advanced Computer Graphics course.
+# Reduced_ARAP_Deformation
+- Committed to 2024-2025 Spring/Summer Yale University CPSC 510.
 - Please do not cheat. For good of both of us.
-- ARAP Deformation and Parameterization.
 - Deformation is interactive.
-- Xcode project. MacOS executable file. Compiled with -ofast optimization.
 - Dependencies: Eigen3/igl(No core algorithms about ARAP are used. igl is only used for user interaction and flip avoid line searching.)/OpenGL/GLFW3/OpenCV
 - Some code for user interaction (in call_back.h) adapted from https://github.com/alecjacobson/geometry-processing-deformation
 - image.h and image.cpp adapted from http://10.76.1.181/courses/training/mitF04/assignments/
@@ -16,4 +14,3 @@
 	- press ' ': change between anchor selection mode and deformation mode
 	- press 'u': single update
 	- press 'g': print deformed .obj file
-- For more data, including results and models, please refer to BAIDU Cloud Disk: https://pan.baidu.com/s/1_ObT-NQUKhNzIlSJ6tfFCw  password: elto
