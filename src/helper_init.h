@@ -13,7 +13,7 @@
 #include <Eigen/SparseCholesky>
 #include <sstream>
 
-inline void processArgv(int argc, const char* argv[], string& input_name,int& itrs,int& func,int& method,bool& flip_avoid ,bool& print_txtfile,bool& print_vtkfile,bool& print_pic,bool& print_each_frame,bool& pause,bool& inf_itr,bool& show_texture,string& texture_name,double& lamda,string& slamda)
+inline void processArgv(int argc, const char* argv[], string& input_name,int& itrs,int& method,bool& flip_avoid ,bool& print_txtfile,bool& print_vtkfile,bool& print_pic,bool& print_each_frame,bool& pause,bool& inf_itr,bool& show_texture,string& texture_name,double& lamda,string& slamda)
 {
     assert(argc>=1);
     for(int i=1;i<argc;i++){
@@ -48,16 +48,6 @@ inline void processArgv(int argc, const char* argv[], string& input_name,int& it
                 assert(0);
             }
         }
-        else if(!strcmp(argv[i],"-function")){
-            i++;
-            assert(i<argc);
-            if(!strcmp(argv[i],"PARAM")) func=PARAM;
-            else if(!strcmp(argv[i],"DEFORM")) func=DEFORM;
-            else {
-                cout<<"Invalid function specified!"<<endl;
-                assert(0);
-            }
-        }
         else if(!strcmp(argv[i],"-flip_avoid")){
             flip_avoid=true;
         }
@@ -89,7 +79,7 @@ inline void processArgv(int argc, const char* argv[], string& input_name,int& it
             cout<<"Invalid input arguments specified!"<<endl;
         }
     }
-    if(func==DEFORM) method=ARAP;
+  method=ARAP;
 }
 
 inline int readObj(const string& input_name,MatrixXi& F,MatrixXi& edges,MatrixXd& verts,vector<HalfEdge>& half_edges,VectorXd& area)

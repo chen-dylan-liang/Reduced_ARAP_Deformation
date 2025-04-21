@@ -27,7 +27,7 @@ void global_phase (MatrixXd* R,const vector<HalfEdge>& half_edges, const VectorX
 
 class ARAP_energy{
 public:
-    double operator()(MatrixXd& res){
+    virtual double operator()(MatrixXd& res){
         double E=0;
         MatrixXd L(2,2);
         for(int i=0;i<half_edges.size()/3;i++){
@@ -91,7 +91,7 @@ public:
         return E;
     }
     ARAP_energy(vector<HalfEdge>& half_edges,VectorXd& weights,VectorXd& area,int method,double lamda):half_edges(half_edges),weights(weights),area(area),method(method),lamda(lamda){}
-private:
+protected:
     VectorXd weights;
     VectorXd area;
     vector<HalfEdge> half_edges;
