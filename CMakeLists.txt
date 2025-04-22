@@ -37,7 +37,7 @@ add_executable(Reduced_ARAP_Deformation
         src/image.cpp
         src/image.h
         src/main.cpp
-        src/dynamic_arap.h)
+)
 
 target_link_libraries(Reduced_ARAP_Deformation
         glad

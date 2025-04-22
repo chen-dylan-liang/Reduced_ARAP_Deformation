@@ -9,7 +9,7 @@
 #include "helper_init.h"
 #include "helper_print.h"
 #include "helper_geometry.h"
-#include "ARAP.h"
+#include "energy.h"
 #include "call_back.h"
 #include <Eigen/Dense>
 #include <Eigen/Core>
@@ -31,25 +31,14 @@ int main(int argc, const char * argv[]) {
     bool inf_itr=false;
     bool show_texture=false;
     string texture_name;
-    double lamda=0;
+    double lambda=0;
+    double g=1.0;
+    double mass=0.001;
     string slamda="0";
     processArgv(argc,argv,input_name,itrs,method,flip_avoid,print_txtfile,print_vtkfile,print_pic,print_each_frame,pause,inf_itr,show_texture,texture_name,lamda,slamda);
-    MatrixXd verts;
-    MatrixXi edges;
-    vector<HalfEdge> half_edges;
-    VectorXd area;
-    MatrixXi F;
-    int vert_num=readObj(input_name,F,edges,verts,half_edges,area);
-    
+
     MatrixXd res;
-    MatrixXd RHS;
-    VectorXd weights;
-    SparseMatrix<double> Laplace;
-    Laplace.resize(vert_num,vert_num);
-    Eigen::SimplicialLDLT<SparseMatrix<double> > dir_solver;
-    MatrixXd* R=NULL;
-    vector<int> fix;
-    vector<VectorXd> fix_vec;
+
     string output_name=genOutputName(input_name,method,slamda,flip_avoid);
     igl::opengl::glfw::Viewer viewer;
 
@@ -63,41 +52,26 @@ int main(int argc, const char * argv[]) {
     bool moved=false;
     bool changed=false;
     RowVector3f last_mouse(0,0,0);
-    edges.resize(0,0);
-    R=new MatrixXd[vert_num];
-    for(int i=0;i<vert_num;i++) {
-            R[i].resize(3,3);
-            R[i].setZero();
-            R[i](0,0)= R[i](1,1)= R[i](2,2)=1;
-    }
-    weights.resize(vert_num*vert_num);
-    getWeights(half_edges,verts,weights,Cotangent_2);
-    sort(half_edges.begin(),half_edges.end(),compare);
-    vector<int>* neighbors=new vector<int>[vert_num];
-    getNeighbors(half_edges,neighbors);
-    res.resize(vert_num,3);
-    RHS.resize(vert_num,3);
+
     for(int i=0;i<vert_num;i++) res.row(i)=verts.col(i).transpose();
-    prev_res = res;
+    LocalGlobalEnergy e(input_name, mass, method, lambda, g);
     //set viewer. The code of initial guess and ARAP optimizations for deformation is in the file call_back.h
-    callbackMouseDown mouseDown(&mode,&now_itr,&last_mouse,&res,&fix,&fix_vec,R,neighbors,&verts,&half_edges,&weights,&RHS,&F,&first,&moved,&changed,&sel,&dir_solver);
-    callbackMouseMove mouseMove(&mode, &res, &fix_vec,&last_mouse,&moved,&sel,&now_itr);
-    callbackKeyPressed keyPressed(&mode,&now_itr,&print_num,&res,&fix,&fix_vec,R,neighbors,&verts,&half_edges,&weights,&RHS,&F,&first,&moved,&changed,&Laplace,&dir_solver,output_name);
-    callbackPreDraw preDraw(&mode,&now_itr,&res,&fix,&fix_vec,R,neighbors,&verts,&half_edges,&weights,&RHS,&F,&first,&moved,&pause,&inf_itr,&dir_solver);
+    callbackMouseDown mouseDown(&e, &mode,&now_itr, &first, &moved,&changed,&sel, &last_mouse, &res);
+    callbackMouseMove mouseMove(&e, &mode, &now_itr, &last_mouse, &res, &last_mouse,&moved,&sel);
+    callbackKeyPressed keyPressed(&e, &mode,&now_itr,&print_num,&res,&first,&moved,&changed, output_name);
+    callbackPreDraw preDraw(&e, &mode,&now_itr,&res,&first,&moved,&pause,&inf_itr);
     viewer.callback_mouse_down=mouseDown;
     viewer.callback_mouse_move=mouseMove;
     viewer.callback_key_pressed=keyPressed;
     viewer.callback_pre_draw=preDraw;
     viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer&, int, int)->bool{ sel = -1; return false;};
-    viewer.data().set_mesh(res,F);
+    viewer.data().set_mesh(res,e.faces());
     viewer.data().show_lines = false;
     viewer.core().is_animating = true;
     viewer.data().face_based = true;
     viewer.data().set_vertices(res);
     viewer.data().set_colors(RowVector3d(1.0,0.9,0.2));
     viewer.launch(false,"deformation",256,256);
-    if(R) delete[] R;
-    if(neighbors) delete[] neighbors;
     return EXIT_SUCCESS;
 }
 

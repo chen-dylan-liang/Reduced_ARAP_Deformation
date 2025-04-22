@@ -10,11 +10,10 @@
 
 #include "global_var.h"
 #include "helper_print.h"
-#include "ARAP.h"
+#include "energy.h"
 #include "dynamic_arap.h"
 
-MatrixXd prev_res;
-inline void updateViewer(igl::opengl::glfw::Viewer& viewer, int& itr, int mode, MatrixXd* R, vector<int>* neighbors,const MatrixXd& verts,const vector<HalfEdge>& half_edges, const VectorXd& weights, vector<int>& fix,vector<VectorXd>& fix_vec,MatrixXd& RHS,bool& first,bool moved, MatrixXd& res,SimplicialLDLT<SparseMatrix<double> >& dir_solver)
+inline void updateViewer(igl::opengl::glfw::Viewer& viewer, LocalGlobalEnergy& e, int& itr, int mode)
  {
    // predefined colors
    const Eigen::RowVector3d orange(1.0,0.7,0.2);
@@ -55,7 +54,7 @@ inline void updateViewer(igl::opengl::glfw::Viewer& viewer, int& itr, int mode, 
     viewer.data().set_points(CU,orange);
    }
    viewer.data().compute_normals();
- };
+ }
 
 
 class callbackMouseDown{
