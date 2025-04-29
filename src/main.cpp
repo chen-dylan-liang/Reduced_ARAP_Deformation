@@ -33,12 +33,13 @@ int main(int argc, const char * argv[]) {
     string texture_name;
     double lambda=0;
     double g=1.0;
-    double mass=0.001;
+    double mass=0.000;
     string slamda="0";
     processArgv(argc,argv,input_name,itrs,method,flip_avoid,print_txtfile,print_vtkfile,print_pic,print_each_frame,pause,inf_itr,show_texture,texture_name,lambda,slamda);
     string output_name=genOutputName(input_name,method,slamda,flip_avoid);
     igl::opengl::glfw::Viewer viewer;
     LocalGlobalEnergy e(input_name, mass, method, lambda, g);
+    printf("constructed energy\n");
     InteractiveHelper helper;
     helper.pause=pause;
     helper.inf_itr=inf_itr;

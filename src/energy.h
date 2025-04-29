@@ -128,17 +128,20 @@ public:
         int vert_num=readObj(input_mesh, faces, edges, verts, half_edges, area);
         laplacian.resize(vert_num,vert_num);
         local_rotations.reserve(vert_num);
-        for(int i=0;i<vert_num;i++) res.row(i)=verts.col(i).transpose();
+        res.resize(vert_num,3);
+        res = verts.transpose();
         for(int i=0;i<vert_num;i++) {
-            local_rotations[i].resize(3,3);
-            local_rotations[i].setZero();
+            local_rotations.push_back(MatrixXd::Zero(3,3));
             local_rotations[i](0,0)= local_rotations[i](1,1)= local_rotations[i](2,2)=1;
         }
         weights.resize(vert_num*vert_num);
         getWeights(half_edges,verts,weights,Cotangent_2);
         sort(half_edges.begin(),half_edges.end(),compare);
         neighbors.reserve(vert_num);
-        getNeighbors(half_edges,&neighbors);
+        for(int i=0;i<vert_num;i++) {
+            neighbors.push_back(vector<int>());
+        }
+        getNeighbors(half_edges, neighbors);
         rhs.resize(vert_num,3);
         mass = mass_d * VectorXd::Ones(vert_num);
     }
@@ -162,7 +165,7 @@ private:
     VectorXd weights;
     VectorXd area;
     vector<HalfEdge> half_edges;
-    vector<int> neighbors;
+    vector<vector<int>> neighbors;
     double g;
     VectorXd mass;
     double lambda;
@@ -206,7 +209,7 @@ private:
     void local_phase(){
         int vert_num=verts.cols();
         for(int i=0;i<vert_num;i++){
-            MatrixXd S=getCovariance3x3(neighbors,verts,res,weights,i);
+            MatrixXd S=getCovariance3x3(neighbors[i],verts,res,weights,i);
             JacobiSVD<MatrixXd> SVD_solver;
             SVD_solver.compute(S,ComputeThinU | ComputeThinV);
             local_rotations[i]=SVD_solver.matrixU()*SVD_solver.matrixV().transpose();

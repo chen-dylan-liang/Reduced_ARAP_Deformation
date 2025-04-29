@@ -12,7 +12,7 @@
 #include <Eigen/CholmodSupport>
 #include <Eigen/SparseCholesky>
 
-void getNeighbors(const vector<HalfEdge>& half_edges, vector<int>* neighbors);
+void getNeighbors(const vector<HalfEdge>& half_edges, vector<vector<int>>& neighbors);
 
 void getWeights(const vector<HalfEdge>& half_edges,const MatrixXd& verts,VectorXd& weights,int Type);
 

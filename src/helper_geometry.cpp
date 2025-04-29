@@ -7,7 +7,7 @@
 
 #include "helper_geometry.h"
 
-void getNeighbors(const vector<HalfEdge>& half_edges, vector<int>* neighbors)
+void getNeighbors(const vector<HalfEdge>& half_edges, vector<vector<int>>& neighbors)
 {
     for(int i=0;i<half_edges.size();i++){
         int a=half_edges[i].Endpoints(0);

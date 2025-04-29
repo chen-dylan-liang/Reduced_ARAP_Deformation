@@ -49,6 +49,7 @@ inline void updateViewer(igl::opengl::glfw::Viewer& viewer, LocalGlobalEnergy& e
        if(helper.anchor_moved){
            //local and global optimizations
            energy.local_global_solve();
+           printf("solved!\n");
            for(int i=0;i<energy.get_anchors().size();i++) energy.get_anchor_points()[i]=(energy.get_res().row(energy.get_anchors()[i]).transpose());
            helper.itr++;
        }
@@ -162,7 +163,7 @@ class callbackKeyPressed{
          }
          // switch mode
          case ' ':
-            helper->mode = (helper->mode + 1)%3;
+            helper->mode = (helper->mode + 1)%2;
            if((helper->mode==1) && (energy->get_anchors()).size()>0)
            {
              //compute Laplace. Only analyze pattern when fixed points changed
@@ -196,7 +197,7 @@ class callbackPreDraw{
     public:
     bool operator()(igl::opengl::glfw::Viewer &viewer)
     {
-        if(viewer.core().is_animating&&(helper->mode==0)){
+        if(viewer.core().is_animating&&(helper->mode==1)){
             if(helper->pause){
                 if(!(helper->anchor_moved))  updateViewer(viewer,*energy, *helper);
             }
