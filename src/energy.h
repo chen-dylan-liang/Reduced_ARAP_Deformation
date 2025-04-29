@@ -116,7 +116,7 @@ public:
         laplacian.setFromTriplets(tripletList.begin(),tripletList.end());
     }
 
-    void solver_analyze_laplacian_patter(){
+    void solver_analyze_laplacian_pattern(){
         solver.analyzePattern(laplacian);
     }
 
@@ -138,7 +138,7 @@ public:
         getWeights(half_edges,verts,weights,Cotangent_2);
         sort(half_edges.begin(),half_edges.end(),compare);
         neighbors.reserve(vert_num);
-        getNeighbors(half_edges,neighbors);
+        getNeighbors(half_edges,&neighbors);
         rhs.resize(vert_num,3);
         mass = mass_d * VectorXd::Ones(vert_num);
     }
@@ -206,7 +206,7 @@ private:
     void local_phase(){
         int vert_num=verts.cols();
         for(int i=0;i<vert_num;i++){
-            MatrixXd S=getCovariance3x3(neighbors[i],verts,res,weights,i);
+            MatrixXd S=getCovariance3x3(neighbors,verts,res,weights,i);
             JacobiSVD<MatrixXd> SVD_solver;
             SVD_solver.compute(S,ComputeThinU | ComputeThinV);
             local_rotations[i]=SVD_solver.matrixU()*SVD_solver.matrixV().transpose();
@@ -226,6 +226,6 @@ private:
             assert(local_rotations[i].determinant()>0);
         }
     }
-}
+};
 
 #endif /* ARAP_h */

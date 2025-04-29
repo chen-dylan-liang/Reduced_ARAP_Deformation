@@ -50,7 +50,7 @@ int main(int argc, const char * argv[]) {
     viewer.callback_mouse_move=mouseMove;
     viewer.callback_key_pressed=keyPressed;
     viewer.callback_pre_draw=preDraw;
-    viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer&, int, int)->bool{ sel = -1; return false;};
+    viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer&, int, int)->bool{ helper.selected_anchor = -1; return false;};
     viewer.data().set_mesh(e.get_res(),e.get_faces());
     viewer.data().show_lines = false;
     viewer.core().is_animating = true;

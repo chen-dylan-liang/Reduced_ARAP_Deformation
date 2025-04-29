@@ -17,7 +17,7 @@ struct InteractiveHelper{
     // mode == 1: move anchors + simulation
     int mode=0;
     // the position of mouse last time
-    RowVector3f last_mouse=RowVector3f::zeros();
+    RowVector3f last_mouse=RowVector3f::Zero();
     bool anchor_changed=false;
     bool anchor_moved=false;
     long selected_anchor=-1;
@@ -29,7 +29,7 @@ struct InteractiveHelper{
 
 };
 
-inline void updateViewer(igl::opengl::glfw::Viewer& viewer, LocalGlobalEnergy& e, InteractiveHelper& helper)
+inline void updateViewer(igl::opengl::glfw::Viewer& viewer, LocalGlobalEnergy& energy, InteractiveHelper& helper)
  {
    // predefined colors
    const Eigen::RowVector3d orange(1.0,0.7,0.2);
@@ -49,7 +49,7 @@ inline void updateViewer(igl::opengl::glfw::Viewer& viewer, LocalGlobalEnergy& e
        if(helper.anchor_moved){
            //local and global optimizations
            energy.local_global_solve();
-           for(int i=0;i<energy.get_anchors().size();i++) energy.get_anchor_points()[i]=(energy.get_res().row(energy.anchors()[i]).transpose());
+           for(int i=0;i<energy.get_anchors().size();i++) energy.get_anchor_points()[i]=(energy.get_res().row(energy.get_anchors()[i]).transpose());
            helper.itr++;
        }
      viewer.data().set_vertices(energy.get_res());
