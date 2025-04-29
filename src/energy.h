@@ -83,6 +83,10 @@ public:
         E += g*mass.transpose()*res.col(1);
         return E;
     }
+    void local_global_solve(){
+        local_phase();
+        global_phase();
+    }
 
     void compute_laplacian(){
         vector< Triplet<double> > tripletList;
@@ -110,10 +114,96 @@ public:
         }
         for(int i=0;i<laplacian.rows();i++) tripletList.push_back(Triplet<double>(i,i,row_sum(i)));
         laplacian.setFromTriplets(tripletList.begin(),tripletList.end());
-
     }
 
-    void local_phase(const MatrixXd& res){
+    void solver_analyze_laplacian_patter(){
+        solver.analyzePattern(laplacian);
+    }
+
+    void solver_factorize(){
+        solver.factorize(laplacian);
+    }
+
+    LocalGlobalEnergy(string input_mesh, int method, double lambda, double mass_d, double g):method(method),lambda(lambda), g(g){
+        int vert_num=readObj(input_mesh, faces, edges, verts, half_edges, area);
+        laplacian.resize(vert_num,vert_num);
+        local_rotations.reserve(vert_num);
+        for(int i=0;i<vert_num;i++) res.row(i)=verts.col(i).transpose();
+        for(int i=0;i<vert_num;i++) {
+            local_rotations[i].resize(3,3);
+            local_rotations[i].setZero();
+            local_rotations[i](0,0)= local_rotations[i](1,1)= local_rotations[i](2,2)=1;
+        }
+        weights.resize(vert_num*vert_num);
+        getWeights(half_edges,verts,weights,Cotangent_2);
+        sort(half_edges.begin(),half_edges.end(),compare);
+        neighbors.reserve(vert_num);
+        getNeighbors(half_edges,neighbors);
+        rhs.resize(vert_num,3);
+        mass = mass_d * VectorXd::Ones(vert_num);
+    }
+    // getters
+    const MatrixXi& get_faces() const {return faces;}
+    const MatrixXd& get_res()const {return res;}
+    const vector<int>& get_anchors()const {return anchors;}
+    const vector<VectorXd>& get_anchor_points() const {return anchor_points;}
+    vector<VectorXd>& get_anchor_points()  {return anchor_points;}
+    // setters
+    void add_anchor(int idx, Eigen::Vector3d point){
+        anchors.push_back(idx);
+        anchor_points.push_back(point);
+    }
+
+private:
+    // user-specified values or pre-computed values from mesh
+    MatrixXd verts;
+    MatrixXi edges;
+    MatrixXi faces;
+    VectorXd weights;
+    VectorXd area;
+    vector<HalfEdge> half_edges;
+    vector<int> neighbors;
+    double g;
+    VectorXd mass;
+    double lambda;
+    int method;
+    // anchors specifying during interaction
+    vector<int> anchors;
+    vector<VectorXd> anchor_points;
+    // global phase
+    MatrixXd res;
+    MatrixXd rhs;
+    SparseMatrix<double> laplacian;
+
+    void global_phase(){
+        compute_rhs();
+        res=solver.solve(rhs);
+    }
+    void compute_rhs(){
+        rhs.fill(0);
+        for(int i=0;i<anchors.size();i++)
+            rhs.row(anchors[i])=2*beta*anchor_points[i].transpose();
+        for(int i=0;i<half_edges.size();i++){
+            long long unsigned int a=half_edges[i].Endpoints(0);
+            long long unsigned  int b=half_edges[i].Endpoints(1);
+            int inv_idx=half_edges[i].InverseIdx;
+            MatrixXd coeR1;
+            MatrixXd coeR2;
+            if(inv_idx!=-1){
+                rhs.row(a)+=(0.5*weights(a*rhs.rows()+b)*(local_rotations[a]+local_rotations[b])*half_edges[i].EdgeVec).transpose();
+            }
+            else{
+                rhs.row(a)+=(0.5*weights(a*rhs.rows()+b)*(local_rotations[a]+local_rotations[b])*half_edges[i].EdgeVec).transpose();
+                rhs.row(b)-=(0.5*weights(a*rhs.rows()+b)*(local_rotations[a]+local_rotations[b])*half_edges[i].EdgeVec).transpose();
+            }
+        }
+        // gravity
+        rhs.col(1) -= g*mass;
+    }
+    SimplicialLDLT<SparseMatrix<double>> solver;
+    // local phase
+    vector<MatrixXd> local_rotations;
+    void local_phase(){
         int vert_num=verts.cols();
         for(int i=0;i<vert_num;i++){
             MatrixXd S=getCovariance3x3(neighbors[i],verts,res,weights,i);
@@ -136,73 +226,6 @@ public:
             assert(local_rotations[i].determinant()>0);
         }
     }
-
-    MatrixXd global_phase(){
-        compute_rhs();
-        return solver.solve(rhs);
-    }
-
-    LocalGlobalEnergy(string input_mesh, int method, double lambda, double mass_d, double g):method(method),lambda(lambda), g(g){
-        int vert_num=readObj(input_mesh, faces, edges, verts, half_edges, area);
-        laplacian.resize(vert_num,vert_num);
-        local_rotations.reserve(vert_num);
-        for(int i=0;i<vert_num;i++) {
-            local_rotations[i].resize(3,3);
-            local_rotations[i].setZero();
-            local_rotations[i](0,0)= local_rotations[i](1,1)= local_rotations[i](2,2)=1;
-        }
-        weights.resize(vert_num*vert_num);
-        getWeights(half_edges,verts,weights,Cotangent_2);
-        sort(half_edges.begin(),half_edges.end(),compare);
-        neighbors.reserve(vert_num);
-        getNeighbors(half_edges,neighbors);
-        rhs.resize(vert_num,3);
-        mass = mass_d * VectorXd::Ones(vert_num);
-    }
-    const MatrixXi& faces(){return faces;}
-private:
-    // user-specified values or pre-computed values from mesh
-    MatrixXd verts;
-    MatrixXi edges;
-    MatrixXi faces;
-    VectorXd weights;
-    VectorXd area;
-    vector<HalfEdge> half_edges;
-    vector<int> neighbors;
-    double g;
-    VectorXd mass;
-    double lambda;
-    int method;
-    // anchors specifying during interaction
-    vector<int>& anchors;
-    vector<VectorXd>& anchor_vec;
-    // global phase
-    MatrixXd rhs;
-    SparseMatrix<double> laplacian;
-    void compute_rhs(){
-        rhs.fill(0);
-        for(int i=0;i<anchors.size();i++)
-            rhs.row(anchors[i])=2*beta*anchor_vec[i].transpose();
-        for(int i=0;i<half_edges.size();i++){
-            long long unsigned int a=half_edges[i].Endpoints(0);
-            long long unsigned  int b=half_edges[i].Endpoints(1);
-            int inv_idx=half_edges[i].InverseIdx;
-            MatrixXd coeR1;
-            MatrixXd coeR2;
-            if(inv_idx!=-1){
-                rhs.row(a)+=(0.5*weights(a*rhs.rows()+b)*(local_rotations[a]+local_rotations[b])*half_edges[i].EdgeVec).transpose();
-            }
-            else{
-                rhs.row(a)+=(0.5*weights(a*rhs.rows()+b)*(local_rotations[a]+local_rotations[b])*half_edges[i].EdgeVec).transpose();
-                rhs.row(b)-=(0.5*weights(a*rhs.rows()+b)*(local_rotations[a]+local_rotations[b])*half_edges[i].EdgeVec).transpose();
-            }
-        }
-        // gravity
-        rhs.col(1) -= g*mass;
-    }
-    SimplicialLDLT<SparseMatrix<double>>& solver;
-    // local phase
-    vector<MatrixXd> local_rotations;
-};
+}
 
 #endif /* ARAP_h */

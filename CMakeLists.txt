@@ -24,8 +24,7 @@ add_library(glad STATIC external/glad/src/glad.c)
 
 # Executable
 add_executable(Reduced_ARAP_Deformation
-        src/ARAP.cpp
-        src/ARAP.h
+        src/energy.h
         src/call_back.h
         src/global_var.h
         src/helper_algebra.cpp
