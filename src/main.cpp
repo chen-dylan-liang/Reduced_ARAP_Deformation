@@ -10,6 +10,7 @@
 #include "helper_print.h"
 #include "helper_geometry.h"
 #include "energy.h"
+#include "reduced_energy.h"
 #include "call_back.h"
 #include <Eigen/Dense>
 #include <Eigen/Core>
@@ -38,25 +39,31 @@ int main(int argc, const char * argv[]) {
     processArgv(argc,argv,input_name,itrs,method,flip_avoid,print_txtfile,print_vtkfile,print_pic,print_each_frame,pause,inf_itr,show_texture,texture_name,lambda,slamda);
     string output_name=genOutputName(input_name,method,slamda,flip_avoid);
     igl::opengl::glfw::Viewer viewer;
-    LocalGlobalEnergy e(input_name, mass, method, lambda, g);
-    printf("constructed energy\n");
+    bool reduced = false;
+    LocalGlobalEnergy* e;
+    if(reduced){
+        e = new ReducedLocalGlobalEnergy(input_name, mass, method, lambda, g, 10);
+    }
+    else{
+        e = new LocalGlobalEnergy(input_name, mass, method, lambda, g);
+    }
     InteractiveHelper helper;
     helper.pause=pause;
     helper.inf_itr=inf_itr;
-    callbackMouseDown mouseDown(&e, &helper);
-    callbackMouseMove mouseMove(&e, &helper);
-    callbackKeyPressed keyPressed(&e, &helper);
-    callbackPreDraw preDraw(&e, &helper);
+    callbackMouseDown mouseDown(e, &helper);
+    callbackMouseMove mouseMove(e, &helper);
+    callbackKeyPressed keyPressed(e, &helper);
+    callbackPreDraw preDraw(e, &helper);
     viewer.callback_mouse_down=mouseDown;
     viewer.callback_mouse_move=mouseMove;
     viewer.callback_key_pressed=keyPressed;
     viewer.callback_pre_draw=preDraw;
     viewer.callback_mouse_up = [&](igl::opengl::glfw::Viewer&, int, int)->bool{ helper.selected_anchor = -1; return false;};
-    viewer.data().set_mesh(e.get_res(),e.get_faces());
+    viewer.data().set_mesh(e->get_res(),e->get_faces());
     viewer.data().show_lines = false;
     viewer.core().is_animating = true;
     viewer.data().face_based = true;
-    viewer.data().set_vertices(e.get_res());
+    viewer.data().set_vertices(e->get_res());
     viewer.data().set_colors(RowVector3d(1.0,0.9,0.2));
     viewer.launch(false,"deformation",256,256);
     return EXIT_SUCCESS;

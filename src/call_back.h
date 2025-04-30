@@ -29,7 +29,7 @@ struct InteractiveHelper{
 
 };
 
-inline void updateViewer(igl::opengl::glfw::Viewer& viewer, LocalGlobalEnergy& energy, InteractiveHelper& helper)
+inline void updateViewer(igl::opengl::glfw::Viewer& viewer, LocalGlobalEnergy* energy, InteractiveHelper* helper)
  {
    // predefined colors
    const Eigen::RowVector3d orange(1.0,0.7,0.2);
@@ -37,28 +37,28 @@ inline void updateViewer(igl::opengl::glfw::Viewer& viewer, LocalGlobalEnergy& e
    const Eigen::RowVector3d blue(0.2,0.3,0.8);
    const Eigen::RowVector3d green(0.2,0.6,0.3);
    // anchor selection
-   if(helper.mode==0){
-      viewer.data().set_vertices(energy.get_res());
+   if(helper->mode==0){
+      viewer.data().set_vertices(energy->get_res());
       viewer.data().set_colors(yellow);
-      MatrixXd CV(energy.get_anchors().size(),3);
-      for(int i=0;i<energy.get_anchors().size();i++) CV.row(i)=energy.get_anchor_points()[i].transpose();
+      MatrixXd CV(energy->get_anchors().size(),3);
+      for(int i=0;i<energy->get_anchors().size();i++) CV.row(i)=energy->get_anchor_points()[i].transpose();
       viewer.data().set_points(CV,green);
    }
    // solve
    else{
-       if(helper.anchor_moved){
+       if(helper->anchor_moved){
            //local and global optimizations
-           energy.local_global_solve();
+           energy->local_global_solve();
            printf("solved!\n");
-           for(int i=0;i<energy.get_anchors().size();i++) energy.get_anchor_points()[i]=(energy.get_res().row(energy.get_anchors()[i]).transpose());
-           helper.itr++;
+           for(int i=0;i<energy->get_anchors().size();i++) energy->get_anchor_points()[i]=(energy->get_res().row(energy->get_anchors()[i]).transpose());
+           helper->itr++;
        }
-     viewer.data().set_vertices(energy.get_res());
+     viewer.data().set_vertices(energy->get_res());
      viewer.data().set_colors(blue);
      // render anchor points
-     MatrixXd CU(energy.get_anchors().size(),3);
-    for(int i=0;i<energy.get_anchors().size();i++)
-    CU.row(i)=energy.get_anchor_points()[i].transpose();
+     MatrixXd CU(energy->get_anchors().size(),3);
+    for(int i=0;i<energy->get_anchors().size();i++)
+    CU.row(i)=energy->get_anchor_points()[i].transpose();
     viewer.data().set_points(CU,orange);
    }
    viewer.data().compute_normals();
@@ -91,7 +91,7 @@ class callbackMouseDown{
             {
                 energy->add_anchor((energy->get_faces())(fid,c), new_c.transpose());
                 helper->anchor_changed=true;
-                updateViewer(viewer,*energy, *helper);
+                updateViewer(viewer,energy, helper);
               return true;
             }
           }
@@ -158,7 +158,7 @@ class callbackKeyPressed{
          case 'U':
          case 'u':
          {
-             updateViewer(viewer,*energy, *helper);
+             updateViewer(viewer,energy, helper);
            break;
          }
          // switch mode
@@ -173,7 +173,7 @@ class callbackKeyPressed{
                }
                energy->solver_compute();
            }
-            updateViewer(viewer,*energy, *helper);
+            updateViewer(viewer,energy, helper);
            break;
            case 'G':
            case 'g':
@@ -198,12 +198,12 @@ class callbackPreDraw{
     {
         if(viewer.core().is_animating&&(helper->mode==1)){
             if(helper->pause){
-                if(!(helper->anchor_moved))  updateViewer(viewer,*energy, *helper);
+                if(!(helper->anchor_moved))  updateViewer(viewer,energy, helper);
             }
             else if(!(helper->inf_itr)){
-                if(helper->itr<4)  updateViewer(viewer,*energy, *helper);
+                if(helper->itr<4)  updateViewer(viewer,energy, helper);
             }
-            else  updateViewer(viewer,*energy, *helper);
+            else  updateViewer(viewer,energy, helper);
         }
         return false;
       }
