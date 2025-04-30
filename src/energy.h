@@ -15,6 +15,7 @@
 #include "Eigen/Sparse"
 #include <Eigen/CholmodSupport>
 #include <Eigen/SparseCholesky>
+#include <set>
 
 class LocalGlobalEnergy{
     public:
@@ -93,25 +94,24 @@ class LocalGlobalEnergy{
             VectorXd row_sum;
             row_sum.resize(laplacian.rows());
             row_sum.fill(0);
-            for(int i=0;i<anchors.size();i++)
-                row_sum(anchors[i])=2*beta;
             for(int i=0;i<half_edges.size();i++){
                 long long unsigned int a=half_edges[i].Endpoints(0);
                 long long unsigned int b=half_edges[i].Endpoints(1);
                 int inv_idx=half_edges[i].InverseIdx;
-                double w=0;
-                w=weights(a*laplacian.rows()+b);
-                if(inv_idx!=-1){
-                    row_sum(a)+=w;
-                    tripletList.push_back(Triplet<double>(a,b,-w));
-                }
-                else{
-                    row_sum(a)+=w;
-                    row_sum(b)+=w;
-                    tripletList.push_back(Triplet<double>(a,b,-w));
-                    tripletList.push_back(Triplet<double>(b,a,-w));
-                }
+                bool a_is_free = anchor_set.find(a)==anchor_set.end();
+                bool b_is_free = anchor_set.find(b)==anchor_set.end();
+                double w=weights(a*laplacian.rows()+b);
+                if(a_is_free) row_sum(a)+=w;
+                // knock out L(a,b) when b is anchor
+                if(a_is_free && b_is_free) tripletList.push_back(Triplet<double>(a,b,-w));
+                    // ab on the boundary
+                    if(inv_idx==-1){
+                        if(b_is_free) row_sum(b)+=w;
+                        // knock out L(b,a) when a is anchor
+                        if(a_is_free && b_is_free) tripletList.push_back(Triplet<double>(b,a,-w));
+                     }
             }
+            for(int i=0; i<anchors.size();i++) row_sum(anchors[i])=1;
             for(int i=0;i<laplacian.rows();i++) tripletList.push_back(Triplet<double>(i,i,row_sum(i)));
             laplacian.setFromTriplets(tripletList.begin(),tripletList.end());
         }
@@ -144,13 +144,17 @@ class LocalGlobalEnergy{
         // getters
         const MatrixXi& get_faces() const {return faces;}
         const MatrixXd& get_res()const {return res;}
-        const vector<int>& get_anchors()const {return anchors;}
-        const vector<VectorXd>& get_anchor_points() const {return anchor_points;}
+        const vector<int>& get_anchors() const {return anchors;}
+        const vector<VectorXd>& get_anchor_points()  const {return anchor_points;}
+        vector<int>& get_anchors() {return anchors;}
         vector<VectorXd>& get_anchor_points()  {return anchor_points;}
         // setters
         void add_anchor(int idx, Eigen::Vector3d point){
-            anchors.push_back(idx);
-            anchor_points.push_back(point);
+            if(anchor_set.find(idx)==anchor_set.end()) {
+              anchor_set.insert(idx);
+              anchors.push_back(idx);
+              anchor_points.push_back(point);
+            }
         }
 
     protected:
@@ -168,6 +172,7 @@ class LocalGlobalEnergy{
         int method;
         // anchors specifying during interaction
         vector<int> anchors;
+        set<int> anchor_set;
         vector<VectorXd> anchor_points;
         // global phase
         MatrixXd res;
@@ -179,29 +184,39 @@ class LocalGlobalEnergy{
 
         MatrixXd compute_rhs(){
             MatrixXd rhs;
-            rhs.resize(verts.rows(),3);
+            rhs.resize(verts.cols(),3);
             rhs.fill(0);
-            for(int i=0;i<anchors.size();i++)
-                rhs.row(anchors[i])=2*beta*anchor_points[i].transpose();
+            for(int i=0;i<anchors.size();i++){
+                rhs.row(anchors[i])=anchor_points[i].transpose();
+            }
             for(int i=0;i<half_edges.size();i++){
                 long long unsigned int a=half_edges[i].Endpoints(0);
                 long long unsigned  int b=half_edges[i].Endpoints(1);
-                int inv_idx=half_edges[i].InverseIdx;
-                MatrixXd coeR1;
-                MatrixXd coeR2;
-                if(inv_idx!=-1){
-                    rhs.row(a)+=(0.5*weights(a*rhs.rows()+b)*(local_rotations[a]+local_rotations[b])*half_edges[i].EdgeVec).transpose();
+                    int inv_idx=half_edges[i].InverseIdx;
+                    MatrixXd coeR1;
+                    MatrixXd coeR2;
+                bool a_is_free = anchor_set.find(a)==anchor_set.end();
+                bool b_is_free = anchor_set.find(b)==anchor_set.end();
+                double w=weights(a*laplacian.rows()+b);
+                if(a_is_free){
+                    rhs.row(a)+=(0.5*w*(local_rotations[a]+local_rotations[b])*half_edges[i].EdgeVec).transpose();
+                    // a is free and connected to an anchor
+                    if(!b_is_free) rhs.row(a)+= w*rhs.row(b);
                 }
-                else{
-                    rhs.row(a)+=(0.5*weights(a*rhs.rows()+b)*(local_rotations[a]+local_rotations[b])*half_edges[i].EdgeVec).transpose();
-                    rhs.row(b)-=(0.5*weights(a*rhs.rows()+b)*(local_rotations[a]+local_rotations[b])*half_edges[i].EdgeVec).transpose();
+                // ab on the boundary
+                if(inv_idx==-1){
+                    if(b_is_free){
+                        rhs.row(b)-=(0.5*w*(local_rotations[a]+local_rotations[b])*half_edges[i].EdgeVec).transpose();
+                    // b is free and connected to an anchor
+                    if(!a_is_free) rhs.row(b)+= w*rhs.row(a);
+                    }
                 }
             }
             // gravity
             rhs.col(1) -= g*mass;
             return rhs;
         }
-        SimplicialLDLT<SparseMatrix<double>> solver;
+    SimplicialLDLT<SparseMatrix<double>> solver;
         // local phase
         vector<MatrixXd> local_rotations;
         void local_phase(){
