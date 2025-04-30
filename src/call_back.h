@@ -169,10 +169,9 @@ class callbackKeyPressed{
              //compute Laplace. Only analyze pattern when fixed points changed
              energy->compute_laplacian();
              if(helper->anchor_changed){
-                  energy->solver_analyze_laplacian_pattern();
                    helper->anchor_changed=false;
                }
-               energy->solver_factorize();
+               energy->solver_compute();
            }
             updateViewer(viewer,*energy, *helper);
            break;

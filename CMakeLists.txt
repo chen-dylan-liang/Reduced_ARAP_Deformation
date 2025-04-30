@@ -36,6 +36,7 @@ add_executable(Reduced_ARAP_Deformation
         src/image.cpp
         src/image.h
         src/main.cpp
+        src/reduced_energy.h
 )
 
 target_link_libraries(Reduced_ARAP_Deformation
