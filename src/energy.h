@@ -81,7 +81,11 @@ class LocalGlobalEnergy{
                 E+=area(i)* ( ( (J-L).transpose() )*(J-L) ).trace() ;
             }
             // gravity
-            E += g*mass.transpose()*res.col(1);
+            if(g!=0.0){
+                MatrixXd pred_res = 2 * res - prev_res;
+                pred_res.col(1).array() -= g*dt*dt;
+                E += ((res-pred_res).transpose()*(res-pred_res)).trace()/dt/dt/2;
+            }
             return E;
         }
 
@@ -115,6 +119,11 @@ class LocalGlobalEnergy{
                         if(a_is_free && b_is_free) tripletList.push_back(Triplet<double>(b,a,-w));
                      }
             }
+            if(g!=0.0){
+            // gravity
+            for(int i=0; i<vert_size(); i++) row_sum(i)+=mass/dt/dt;
+            }
+            // set the diagonals of anchors to 1
             for(int i=0; i<anchors.size();i++) row_sum(anchors[i])=1;
             for(int i=0;i<laplacian.rows();i++) tripletList.push_back(Triplet<double>(i,i,row_sum(i)));
             laplacian.setFromTriplets(tripletList.begin(),tripletList.end());
@@ -125,13 +134,16 @@ class LocalGlobalEnergy{
             solver.compute(laplacian);
         }
 
-        LocalGlobalEnergy(string input_mesh, int method, double lambda, double mass_d, double g, VectorXd offset):method(method),lambda(lambda), g(g){
+        LocalGlobalEnergy(string input_mesh, int method, double lambda, double mass, double g, double dt, VectorXd offset):method(method),lambda(lambda), mass(mass),g(g),
+        dt(dt){
             int vert_num=readObj(input_mesh, faces, edges, verts, half_edges, area);
             for(int i=0; i<vert_num; i++) verts.col(i) += offset;
             laplacian.resize(vert_num,vert_num);
             local_rotations.reserve(vert_num);
             res.resize(vert_num,3);
+            prev_res.resize(vert_num,3);
             res = verts.transpose();
+            prev_res = verts.transpose();
             for(int i=0;i<vert_num;i++) {
                 local_rotations.push_back(MatrixXd::Zero(3,3));
                 local_rotations[i](0,0)= local_rotations[i](1,1)= local_rotations[i](2,2)=1;
@@ -144,7 +156,6 @@ class LocalGlobalEnergy{
                 neighbors.push_back(vector<int>());
             }
             getNeighbors(half_edges, neighbors);
-            mass = mass_d * VectorXd::Ones(vert_num);
         }
         // getters
         const MatrixXi& get_faces() const {return faces;}
@@ -181,8 +192,9 @@ class LocalGlobalEnergy{
         vector<HalfEdge> half_edges;
         vector<vector<int>> neighbors;
         double g;
-        VectorXd mass;
+        double mass;
         double lambda;
+        double dt;
         int method;
         // anchors specifying during interaction
         vector<int> anchors;
@@ -191,6 +203,7 @@ class LocalGlobalEnergy{
         vector<int> anchor_in_batch;
         // global phase
         MatrixXd res;
+        MatrixXd prev_res;
         SparseMatrix<double> laplacian;
 
         virtual MatrixXd global_phase(){
@@ -227,8 +240,18 @@ class LocalGlobalEnergy{
                     }
                 }
             }
-            // gravity
-            rhs.col(1) -= g*mass;
+            if(g!=0.0){
+                // gravity m/dt/dt * (2Xn-Xn-1+dt*dt*g)
+                MatrixXd pred_res = (2 * res - prev_res)*mass/dt/dt;
+                pred_res.col(1).array() -= mass*g;
+                // zero out anchor entries for pred_res
+                for(int i=0;i<anchors.size();i++){
+                    pred_res.row(anchors[i])=RowVector3d::Zero();
+                }
+                rhs = rhs + pred_res;
+            }
+            // update prev_res
+            prev_res = res;
             return rhs;
         }
     SimplicialLDLT<SparseMatrix<double>> solver;

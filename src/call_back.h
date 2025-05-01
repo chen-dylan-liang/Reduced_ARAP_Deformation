@@ -54,14 +54,13 @@ inline void updateViewer(igl::opengl::glfw::Viewer& viewer, vector<LocalGlobalEn
    }
    // solve
    else{
-       if(helper->anchor_moved){
+
            //local and global optimizations
            for(int i=0;i<energy.size();i++){
                energy[i]->local_global_solve();
                global_res.middleRows(i*verts_num, verts_num)=energy[i]->get_res();
            }
            helper->itr++;
-       }
      viewer.data().set_vertices(global_res);
      viewer.data().set_colors(blue);
      // render anchor points

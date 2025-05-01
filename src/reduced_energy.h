@@ -8,9 +8,9 @@
 
 class ReducedLocalGlobalEnergy: public LocalGlobalEnergy{
     public:
-        ReducedLocalGlobalEnergy(string input_mesh, int method, double lambda, double mass_d, double g, VectorXd offset,int subspace_dim,
+        ReducedLocalGlobalEnergy(string input_mesh, int method, double lambda, double mass, double g, double dt, VectorXd offset,int subspace_dim,
                                  bool restore_rest_pose=true):
-                                 LocalGlobalEnergy(input_mesh, method, lambda, mass_d, g,offset), linearly_precise(restore_rest_pose),
+                                 LocalGlobalEnergy(input_mesh, method, lambda, mass, g,dt, offset), linearly_precise(restore_rest_pose),
                                  subspace_dim(subspace_dim){
 
             S.resize(subspace_dim, verts.cols());
