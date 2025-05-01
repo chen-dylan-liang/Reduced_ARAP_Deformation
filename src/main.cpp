@@ -39,10 +39,10 @@ int main(int argc, const char * argv[]) {
     processArgv(argc,argv,input_name,itrs,method,flip_avoid,print_txtfile,print_vtkfile,print_pic,print_each_frame,pause,inf_itr,show_texture,texture_name,lambda,slamda);
     string output_name=genOutputName(input_name,method,slamda,flip_avoid);
     igl::opengl::glfw::Viewer viewer;
-    bool reduced = false;
+    bool reduced = true;
     LocalGlobalEnergy* e;
     if(reduced){
-        e = new ReducedLocalGlobalEnergy(input_name, mass, method, lambda, g, 10);
+        e = new ReducedLocalGlobalEnergy(input_name, mass, method, lambda, g, 50);
     }
     else{
         e = new LocalGlobalEnergy(input_name, mass, method, lambda, g);
