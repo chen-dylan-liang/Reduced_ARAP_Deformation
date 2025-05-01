@@ -40,13 +40,14 @@ inline void updateViewer(igl::opengl::glfw::Viewer& viewer, vector<LocalGlobalEn
    const Eigen::RowVector3d blue(0.2,0.3,0.8);
    const Eigen::RowVector3d green(0.2,0.6,0.3);
    int verts_num = energy[0]->vert_size();
-   // anchor selection
-   if(helper->mode==0){
+   // selection mode
+   if(helper->mode==0 || helper->mode==2){
       for(int i=0;i<energy.size();i++){
           global_res.middleRows(i*verts_num, verts_num)=energy[i]->get_res();
       }
       viewer.data().set_vertices(global_res);
-      viewer.data().set_colors(yellow);
+      if (helper->mode ==0) viewer.data().set_colors(yellow);
+      else  viewer.data().set_colors(orange);
       MatrixXd CV(energy[0]->get_anchors().size(),3);
       for(int i=0;i<energy[0]->get_anchors().size();i++) CV.row(i)=energy[0]->get_anchor_points()[i].transpose();
       viewer.data().set_points(CV,green);
@@ -139,19 +140,48 @@ class callbackMouseMove{
     public:
         bool operator() (igl::opengl::glfw::Viewer & viewer, int, int)
       {
-        if(helper->selected_anchor!=-1)
-        {
-          Eigen::RowVector3f drag_mouse(viewer.current_mouse_x,viewer.core().viewport(3) - viewer.current_mouse_y,(helper->last_mouse)(2));
-          Eigen::RowVector3f drag_scene,last_scene;
-          igl::unproject(drag_mouse,viewer.core().view,viewer.core().proj,viewer.core().viewport,drag_scene);
-          igl::unproject(helper->last_mouse,viewer.core().view,viewer.core().proj,viewer.core().viewport,last_scene);
-          for(int i=0; i<energy.size(); i++){
-              (energy[i]->get_anchor_points())[helper->selected_anchor] +=(drag_scene-last_scene).cast<double>();
-          }
-          helper->last_mouse = drag_mouse;
-          helper->itr=0;
-          helper->anchor_moved=true;
-          return true;
+            // simulation mode
+        if(helper->mode==1){
+            if(helper->selected_anchor!=-1)
+            {
+              Eigen::RowVector3f drag_mouse(viewer.current_mouse_x,viewer.core().viewport(3) - viewer.current_mouse_y,(helper->last_mouse)(2));
+              Eigen::RowVector3f drag_scene,last_scene;
+              igl::unproject(drag_mouse,viewer.core().view,viewer.core().proj,viewer.core().viewport,drag_scene);
+              igl::unproject(helper->last_mouse,viewer.core().view,viewer.core().proj,viewer.core().viewport,last_scene);
+              if(!energy[0]->anchor_in_region(helper->selected_anchor)){
+                for(int i=0; i<energy.size(); i++){
+                    (energy[i]->get_anchor_points())[helper->selected_anchor] +=(drag_scene-last_scene).cast<double>();
+                }
+              }
+              else{
+                  for(int i=0; i<energy.size(); i++){
+                      for(int j=0; j<energy[i]->get_anchors().size();j++)
+                        if(energy[i]->anchor_in_region(j)){
+                          (energy[i]->get_anchor_points())[j] += (drag_scene-last_scene).cast<double>();
+                      }
+                  }
+              }
+              helper->last_mouse = drag_mouse;
+              helper->itr=0;
+              helper->anchor_moved=true;
+              return true;
+            }
+        }
+        // region selection
+        else if (helper->mode==2){
+            Eigen::RowVector3f drag_mouse(viewer.current_mouse_x, viewer.core().viewport(3) - viewer.current_mouse_y, (helper->last_mouse)(2));
+            Eigen::RowVector3f start(std::min(drag_mouse.x(), helper->last_mouse.x()),std::min(drag_mouse.y(), helper->last_mouse.y()), 0.0);
+            Eigen::RowVector3f end(std::max(drag_mouse.x(),helper->last_mouse.x()),std::max(drag_mouse.y(), helper->last_mouse.y()), 0.0);
+            for(int i=0; i<energy[0]->vert_size();i++){
+                Eigen::RowVector3f projected=igl::project(Eigen::Matrix<float, 3,1>(energy[0]->get_res().row(i).transpose().cast<float>()),
+                        viewer.core().view,
+                        viewer.core().proj,
+                        viewer.core().viewport);
+                if(projected.x()>start.x()&&projected.x()<end.x()&&projected.y()>start.y()&&projected.y()<end.y()){
+                    for(int j=0; j<energy.size();j++) energy[j]->add_anchor(i, energy[j]->get_res().row(i).transpose(),true);
+                }
+            }
+            updateViewer(viewer, energy,helper);
         }
         return false;
       }
@@ -168,16 +198,28 @@ class callbackKeyPressed{
      {
        switch(key)
        {
-         case 'U':
-         case 'u':
-         {
-             updateViewer(viewer,energy, helper);
-           break;
-         }
-         // switch mode
+           // anchor selection mode
+           case '1':
+               helper->mode =0;
+               updateViewer(viewer,energy, helper);
+               break;
+           // region selection mode
+           case '2':
+               helper->mode =2;
+               updateViewer(viewer,energy, helper);
+               break;
+           // remove anchors
+           case 'R':
+           case 'r':
+               if(helper->mode!=1){
+               for(int i=0;i<energy.size();i++) energy[i]->clear_anchors();
+               updateViewer(viewer,energy, helper);}
+
+               break;
+         // simulation mode, when already in simulation mode, this alternates subspace
          case ' ':
-            helper->mode = (helper->mode + 1)%2;
-           if((helper->mode==1) && (energy[0]->get_anchors()).size()>0)
+            helper->mode = 1;
+           if(energy[0]->get_anchors().size()>0)
            {
              //compute Laplace. Only analyze pattern when fixed points changed
              for(int i=0;i<energy.size();i++) energy[i]->compute_laplacian();

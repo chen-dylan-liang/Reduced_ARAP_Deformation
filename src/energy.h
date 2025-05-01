@@ -154,13 +154,21 @@ class LocalGlobalEnergy{
         const vector<VectorXd>& get_anchor_points()  const {return anchor_points;}
         vector<int>& get_anchors() {return anchors;}
         vector<VectorXd>& get_anchor_points()  {return anchor_points;}
+        bool anchor_in_region(int i) {return (bool)anchor_in_batch[i];}
         // setters
-        void add_anchor(int idx, Eigen::Vector3d point){
+        void add_anchor(int idx, Eigen::Vector3d point, bool batch_op=false){
             if(anchor_set.find(idx)==anchor_set.end()) {
               anchor_set.insert(idx);
               anchors.push_back(idx);
               anchor_points.push_back(point);
+              anchor_in_batch.push_back((int)batch_op);
             }
+        }
+        void clear_anchors(){
+            anchors.clear();
+            anchor_set.clear();
+            anchor_points.clear();
+            anchor_in_batch.clear();
         }
 
     protected:
@@ -180,6 +188,7 @@ class LocalGlobalEnergy{
         vector<int> anchors;
         set<int> anchor_set;
         vector<VectorXd> anchor_points;
+        vector<int> anchor_in_batch;
         // global phase
         MatrixXd res;
         SparseMatrix<double> laplacian;
