@@ -8,10 +8,10 @@
 
 class ReducedLocalGlobalEnergy: public LocalGlobalEnergy{
     public:
-        ReducedLocalGlobalEnergy(string input_mesh, int method, double lambda, double mass_d, double g, int subspace_dim,
+        ReducedLocalGlobalEnergy(string input_mesh, int method, double lambda, double mass_d, double g, VectorXd offset,int subspace_dim,
                                  bool restore_rest_pose=true):
-                                 LocalGlobalEnergy(input_mesh, method, lambda, mass_d, g), linearly_precise(restore_rest_pose),
-                                 specified_subspace_dim(subspace_dim){
+                                 LocalGlobalEnergy(input_mesh, method, lambda, mass_d, g,offset), linearly_precise(restore_rest_pose),
+                                 subspace_dim(subspace_dim){
 
             S.resize(subspace_dim, verts.cols());
             T.resize((verts.cols()-subspace_dim),verts.cols());
@@ -54,7 +54,6 @@ class ReducedLocalGlobalEnergy: public LocalGlobalEnergy{
             solver.compute(Qtt);
             MatrixXd X = solver.solve(Qts);
             subspace = S.transpose() - T.transpose() * X;
-            cout<<subspace<<endl;
             for (int idx : anchors) {
                 subspace.row(idx).setZero();
             }
@@ -62,7 +61,8 @@ class ReducedLocalGlobalEnergy: public LocalGlobalEnergy{
         void sample_subspace(){
             // sample subspace point indices
             subspace_index_set.clear();
-            while(subspace_index_set.size()<specified_subspace_dim){
+            int max_size = std::min(subspace_dim, (int)(verts.cols()-anchors.size()));
+            while(subspace_index_set.size()<max_size){
                 int idx = std::rand()%verts.cols();
                 if(subspace_index_set.find(idx)==subspace_index_set.end()&&anchor_set.find(idx)==anchor_set.end())
                     subspace_index_set.insert(idx);
@@ -120,7 +120,7 @@ class ReducedLocalGlobalEnergy: public LocalGlobalEnergy{
         }
 
         // h
-        int specified_subspace_dim;
+        int subspace_dim;
         // n x h
         MatrixXd subspace;
         // related to subspace computations

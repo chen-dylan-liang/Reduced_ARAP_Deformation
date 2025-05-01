@@ -12,6 +12,9 @@
 #include "helper_print.h"
 #include "energy.h"
 
+inline static MatrixXd global_res;
+inline static MatrixXi global_face;
+
 struct InteractiveHelper{
     // mode == 0: anchor selection
     // mode == 1: move anchors + simulation
@@ -29,36 +32,41 @@ struct InteractiveHelper{
 
 };
 
-inline void updateViewer(igl::opengl::glfw::Viewer& viewer, LocalGlobalEnergy* energy, InteractiveHelper* helper)
+inline void updateViewer(igl::opengl::glfw::Viewer& viewer, vector<LocalGlobalEnergy*>& energy, InteractiveHelper* helper)
  {
    // predefined colors
    const Eigen::RowVector3d orange(1.0,0.7,0.2);
    const Eigen::RowVector3d yellow(1.0,0.9,0.2);
    const Eigen::RowVector3d blue(0.2,0.3,0.8);
    const Eigen::RowVector3d green(0.2,0.6,0.3);
+   int verts_num = energy[0]->vert_size();
    // anchor selection
    if(helper->mode==0){
-      viewer.data().set_vertices(energy->get_res());
+      for(int i=0;i<energy.size();i++){
+          global_res.middleRows(i*verts_num, verts_num)=energy[i]->get_res();
+      }
+      viewer.data().set_vertices(global_res);
       viewer.data().set_colors(yellow);
-      MatrixXd CV(energy->get_anchors().size(),3);
-      for(int i=0;i<energy->get_anchors().size();i++) CV.row(i)=energy->get_anchor_points()[i].transpose();
+      MatrixXd CV(energy[0]->get_anchors().size(),3);
+      for(int i=0;i<energy[0]->get_anchors().size();i++) CV.row(i)=energy[0]->get_anchor_points()[i].transpose();
       viewer.data().set_points(CV,green);
    }
    // solve
    else{
        if(helper->anchor_moved){
            //local and global optimizations
-           energy->local_global_solve();
-           printf("solved!\n");
-           for(int i=0;i<energy->get_anchors().size();i++) energy->get_anchor_points()[i]=(energy->get_res().row(energy->get_anchors()[i]).transpose());
+           for(int i=0;i<energy.size();i++){
+               energy[i]->local_global_solve();
+               global_res.middleRows(i*verts_num, verts_num)=energy[i]->get_res();
+           }
            helper->itr++;
        }
-     viewer.data().set_vertices(energy->get_res());
+     viewer.data().set_vertices(global_res);
      viewer.data().set_colors(blue);
      // render anchor points
-     MatrixXd CU(energy->get_anchors().size(),3);
-    for(int i=0;i<energy->get_anchors().size();i++)
-    CU.row(i)=energy->get_anchor_points()[i].transpose();
+     MatrixXd CU(energy[0]->get_anchors().size(),3);
+    for(int i=0;i<energy[0]->get_anchors().size();i++)
+    CU.row(i)=energy[0]->get_anchor_points()[i].transpose();
     viewer.data().set_points(CU,orange);
    }
    viewer.data().compute_normals();
@@ -78,18 +86,21 @@ class callbackMouseDown{
                                       viewer.core().view,
                                       viewer.core().proj,
                                       viewer.core().viewport,
-                                      energy->get_res(),
-                                      energy->get_faces(),
+                                      energy[0]->get_res(),
+                                      energy[0]->get_faces(),
                                       fid,
                                       bary)){
             long c;
             bary.maxCoeff(&c);
-            Eigen::RowVector3d new_c = (energy->get_res()).row((energy->get_faces())(fid,c));
-            MatrixXd CV((energy->get_anchors()).size(),3);
-            for(int i=0;i<(energy->get_anchors()).size();i++) CV.row(i)=((energy->get_anchor_points())[i]).transpose();
-            if(energy->get_anchors().empty() || (CV.rowwise()-new_c).rowwise().norm().minCoeff() > 0)
+            Eigen::RowVector3d new_c = (energy[0]->get_res()).row((energy[0]->get_faces())(fid,c));
+            MatrixXd CV((energy[0]->get_anchors()).size(),3);
+            for(int i=0;i<(energy[0]->get_anchors()).size();i++) CV.row(i)=((energy[0]->get_anchor_points())[i]).transpose();
+            if(energy[0]->get_anchors().empty() || (CV.rowwise()-new_c).rowwise().norm().minCoeff() > 0)
             {
-                energy->add_anchor((energy->get_faces())(fid,c), new_c.transpose());
+                for(int i=0;i<energy.size();i++){
+                    Eigen::RowVector3d new_c_i = (energy[i]->get_res()).row((energy[i]->get_faces())(fid,c));
+                    energy[i]->add_anchor((energy[i]->get_faces())(fid,c), new_c_i.transpose());
+                }
                 helper->anchor_changed=true;
                 updateViewer(viewer,energy, helper);
               return true;
@@ -99,8 +110,8 @@ class callbackMouseDown{
         else if(helper->mode==1){
           // Move the closest control point
           Eigen::MatrixXf CP;
-          MatrixXd CU((energy->get_anchors()).size(),3);
-          for(int i=0;i<(energy->get_anchors()).size();i++) CU.row(i)= (energy->get_anchor_points())[i].transpose();
+          MatrixXd CU((energy[0]->get_anchors()).size(),3);
+          for(int i=0;i<(energy[0]->get_anchors()).size();i++) CU.row(i)= (energy[0]->get_anchor_points())[i].transpose();
           igl::project(Eigen::MatrixXf(CU.cast<float>()),
                        viewer.core().view,
                        viewer.core().proj,
@@ -117,10 +128,10 @@ class callbackMouseDown{
         return false;
     }
 
-    callbackMouseDown(LocalGlobalEnergy* energy,InteractiveHelper* helper):
+    callbackMouseDown(vector<LocalGlobalEnergy*> energy,InteractiveHelper* helper):
                                         energy(energy),helper(helper){}
     private:
-        LocalGlobalEnergy* energy;
+        vector<LocalGlobalEnergy*> energy;
         InteractiveHelper* helper;
 };
 
@@ -134,7 +145,9 @@ class callbackMouseMove{
           Eigen::RowVector3f drag_scene,last_scene;
           igl::unproject(drag_mouse,viewer.core().view,viewer.core().proj,viewer.core().viewport,drag_scene);
           igl::unproject(helper->last_mouse,viewer.core().view,viewer.core().proj,viewer.core().viewport,last_scene);
-          (energy->get_anchor_points())[helper->selected_anchor] +=(drag_scene-last_scene).cast<double>();
+          for(int i=0; i<energy.size(); i++){
+              (energy[i]->get_anchor_points())[helper->selected_anchor] +=(drag_scene-last_scene).cast<double>();
+          }
           helper->last_mouse = drag_mouse;
           helper->itr=0;
           helper->anchor_moved=true;
@@ -142,10 +155,10 @@ class callbackMouseMove{
         }
         return false;
       }
-        callbackMouseMove(LocalGlobalEnergy* energy,InteractiveHelper* helper):
+        callbackMouseMove(vector<LocalGlobalEnergy*> energy,InteractiveHelper* helper):
                 energy(energy),helper(helper){}
     private:
-        LocalGlobalEnergy* energy;
+    vector<LocalGlobalEnergy*> energy;
         InteractiveHelper* helper;
 };
 
@@ -164,20 +177,20 @@ class callbackKeyPressed{
          // switch mode
          case ' ':
             helper->mode = (helper->mode + 1)%2;
-           if((helper->mode==1) && (energy->get_anchors()).size()>0)
+           if((helper->mode==1) && (energy[0]->get_anchors()).size()>0)
            {
              //compute Laplace. Only analyze pattern when fixed points changed
-             energy->compute_laplacian();
+             for(int i=0;i<energy.size();i++) energy[i]->compute_laplacian();
              if(helper->anchor_changed){
                    helper->anchor_changed=false;
                }
-               energy->solver_compute();
+               for(int i=0;i<energy.size();i++) energy[i]->solver_compute();
            }
             updateViewer(viewer,energy, helper);
            break;
            case 'G':
            case 'g':
-                printObjModel(energy->get_res(),energy->get_faces(),helper->output_name,helper->output_num);
+                printObjModel(energy[0]->get_res(),energy[0]->get_faces(),helper->output_name,helper->output_num);
                 helper->output_num++;
                break;
          default:
@@ -185,10 +198,10 @@ class callbackKeyPressed{
        }
        return true;
      }
-    callbackKeyPressed(LocalGlobalEnergy* energy,InteractiveHelper* helper):
+    callbackKeyPressed(vector<LocalGlobalEnergy*> energy,InteractiveHelper* helper):
             energy(energy),helper(helper){}
     private:
-        LocalGlobalEnergy* energy;
+        vector<LocalGlobalEnergy*> energy;
         InteractiveHelper* helper;
 };
 
@@ -207,10 +220,10 @@ class callbackPreDraw{
         }
         return false;
       }
-        callbackPreDraw(LocalGlobalEnergy* energy,InteractiveHelper* helper):
+        callbackPreDraw(vector<LocalGlobalEnergy*> energy,InteractiveHelper* helper):
                 energy(energy),helper(helper){}
     private:
-        LocalGlobalEnergy* energy;
+        vector<LocalGlobalEnergy*> energy;
         InteractiveHelper* helper;
 };
 

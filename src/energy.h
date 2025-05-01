@@ -84,6 +84,10 @@ class LocalGlobalEnergy{
             E += g*mass.transpose()*res.col(1);
             return E;
         }
+
+        int vert_size() const{
+            return verts.cols();
+        }
         virtual void local_global_solve(){
             local_phase();
             res=global_phase();
@@ -121,8 +125,9 @@ class LocalGlobalEnergy{
             solver.compute(laplacian);
         }
 
-        LocalGlobalEnergy(string input_mesh, int method, double lambda, double mass_d, double g):method(method),lambda(lambda), g(g){
+        LocalGlobalEnergy(string input_mesh, int method, double lambda, double mass_d, double g, VectorXd offset):method(method),lambda(lambda), g(g){
             int vert_num=readObj(input_mesh, faces, edges, verts, half_edges, area);
+            for(int i=0; i<vert_num; i++) verts.col(i) += offset;
             laplacian.resize(vert_num,vert_num);
             local_rotations.reserve(vert_num);
             res.resize(vert_num,3);
@@ -143,6 +148,7 @@ class LocalGlobalEnergy{
         }
         // getters
         const MatrixXi& get_faces() const {return faces;}
+        MatrixXi get_faces() {return faces;}
         const MatrixXd& get_res()const {return res;}
         const vector<int>& get_anchors() const {return anchors;}
         const vector<VectorXd>& get_anchor_points()  const {return anchor_points;}
