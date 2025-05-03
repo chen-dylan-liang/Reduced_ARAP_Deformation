@@ -8,10 +8,10 @@
 
 class ReducedLocalGlobalEnergy: public LocalGlobalEnergy{
     public:
-        ReducedLocalGlobalEnergy(string input_mesh, int method, double lambda, double mass, double g, double dt, VectorXd offset,int subspace_dim,
+        ReducedLocalGlobalEnergy(string input_mesh, int method, double lambda, double mass, double g, double dt, VectorXd offset,double subspace_res,
                                  bool restore_rest_pose=true):
                                  LocalGlobalEnergy(input_mesh, method, lambda, mass, g,dt, offset), linearly_precise(restore_rest_pose),
-                                 subspace_dim(subspace_dim){
+                                 subspace_dim(int(subspace_res*vert_size())){
 
             S.resize(subspace_dim, verts.cols());
             T.resize((verts.cols()-subspace_dim),verts.cols());
@@ -30,6 +30,8 @@ class ReducedLocalGlobalEnergy: public LocalGlobalEnergy{
             compute_subspace();
             reduced_solver.compute(subspace.transpose()*laplacian*subspace);
         }
+
+
 
     private:
         MatrixXd global_phase() override{

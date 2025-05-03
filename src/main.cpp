@@ -23,7 +23,7 @@ int main(int argc, const char * argv[]) {
     /*initialization*/
     string input_name;
     int itrs=4;
-    int method=ARAP;
+    int method=ASAP;
     bool flip_avoid=false;
     bool print_pic=false;
     bool print_vtkfile=false;
@@ -34,7 +34,7 @@ int main(int argc, const char * argv[]) {
     bool show_texture=false;
     string texture_name;
     double lambda=0;
-    double g = 5.0;
+    double g = 0.0;
     double mass = 1e-4;
     double dt = 0.1;
     string slamda="0";
@@ -42,13 +42,14 @@ int main(int argc, const char * argv[]) {
     string output_name=genOutputName(input_name,method,slamda,flip_avoid);
     igl::opengl::glfw::Viewer viewer;
     vector<LocalGlobalEnergy*> energy_vec;
-    int resolutions[7] = { 50, 100, 200, 300, 400};
+    double resolutions[7] = { 0.1, 0.2, 0.4, 0.6, 0.8};
     double x_step = 1;
     double y_step = -1;
     Vector3d offsets[7] = {
             Vector3d(x_step,0,0),  Vector3d(2*x_step,0,0),
             Vector3d(0,y_step,0), Vector3d(x_step,y_step,0), Vector3d(2*x_step,y_step,0),
     };
+    method=ARAP;
     energy_vec.push_back(new LocalGlobalEnergy(input_name,  method, lambda, mass, g,dt, Vector3d(0,0,0)));
     for(int i=0;i<5;i++){
         energy_vec.push_back(new ReducedLocalGlobalEnergy(input_name,  method, lambda, mass, g, dt, offsets[i],resolutions[i]));

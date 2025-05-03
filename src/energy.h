@@ -182,6 +182,11 @@ class LocalGlobalEnergy{
             anchor_in_batch.clear();
         }
 
+        void restore_rest_pose(){
+            for(int i=0 ;i<anchor_points.size();i++) anchor_points[i]=verts.col(anchors[i]).transpose();
+            //res = verts.transpose();
+        }
+
     protected:
         // user-specified values or pre-computed values from mesh
         MatrixXd verts;
@@ -263,8 +268,13 @@ class LocalGlobalEnergy{
                 MatrixXd S=getCovariance3x3(neighbors[i],verts,res,weights,i);
                 JacobiSVD<MatrixXd> SVD_solver;
                 SVD_solver.compute(S,ComputeThinU | ComputeThinV);
-                local_rotations[i]=SVD_solver.matrixU()*SVD_solver.matrixV().transpose();
+                // similarity matrix for asap
                 VectorXd singular_value=SVD_solver.singularValues();
+                Matrix3d similarity;
+                similarity.fill(0);
+                similarity(0,0)=similarity(1,1)=similarity(2,2)=singular_value.sum()/3.0;
+                if(method==ARAP) local_rotations[i]=SVD_solver.matrixU()*SVD_solver.matrixV().transpose();
+                else if(method==ASAP) local_rotations[i]=SVD_solver.matrixU()*similarity*SVD_solver.matrixV().transpose();
                 if(local_rotations[i].determinant()<0){
                     double smallest_sv=1e16;
                     double smallest_sv_idx=-1;
@@ -275,7 +285,16 @@ class LocalGlobalEnergy{
                         }
                     MatrixXd newV=SVD_solver.matrixV().transpose();
                     newV.row(smallest_sv_idx)=-1.0*newV.row(smallest_sv_idx);
-                    local_rotations[i]=SVD_solver.matrixU()*newV;
+                    if(method==ARAP) local_rotations[i]=SVD_solver.matrixU()*newV;
+                    else if(method==ASAP){
+                        double val=0.0;
+                        for(int j=0;j<3;j++){
+                            if(j==smallest_sv_idx) val-=singular_value(j);
+                            else val+=singular_value(j);
+                        }
+                        similarity(0,0)=similarity(1,1)=similarity(2,2)=val;
+                        local_rotations[i]=SVD_solver.matrixU()*similarity*newV;
+                    }
                 }
                 assert(local_rotations[i].determinant()>0);
             }

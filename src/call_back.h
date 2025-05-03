@@ -21,7 +21,6 @@ struct InteractiveHelper{
     int mode=0;
     // the position of mouse last time
     RowVector3f last_mouse=RowVector3f::Zero();
-    bool anchor_changed=false;
     bool anchor_moved=false;
     long selected_anchor=-1;
     int itr=0;
@@ -101,7 +100,6 @@ class callbackMouseDown{
                     Eigen::RowVector3d new_c_i = (energy[i]->get_res()).row((energy[i]->get_faces())(fid,c));
                     energy[i]->add_anchor((energy[i]->get_faces())(fid,c), new_c_i.transpose());
                 }
-                helper->anchor_changed=true;
                 updateViewer(viewer,energy, helper);
               return true;
             }
@@ -207,12 +205,18 @@ class callbackKeyPressed{
                helper->mode =2;
                updateViewer(viewer,energy, helper);
                break;
-           // remove anchors
            case 'R':
            case 'r':
                if(helper->mode!=1){
+                   // remove anchors
                for(int i=0;i<energy.size();i++) energy[i]->clear_anchors();
-               updateViewer(viewer,energy, helper);}
+               updateViewer(viewer,energy, helper);
+               }
+               else{
+                   // restore rest pose
+                   for(int i=0;i<energy.size();i++) energy[i]->restore_rest_pose();
+                   updateViewer(viewer,energy, helper);
+               }
 
                break;
          // simulation mode, when already in simulation mode, this alternates subspace
@@ -220,12 +224,10 @@ class callbackKeyPressed{
             helper->mode = 1;
            if(energy[0]->get_anchors().size()>0)
            {
-             //compute Laplace. Only analyze pattern when fixed points changed
-             for(int i=0;i<energy.size();i++) energy[i]->compute_laplacian();
-             if(helper->anchor_changed){
-                   helper->anchor_changed=false;
-               }
-               for(int i=0;i<energy.size();i++) energy[i]->solver_compute();
+             for(int i=0;i<energy.size();i++){
+                 energy[i]->compute_laplacian();
+                 energy[i]->solver_compute();
+             }
            }
             updateViewer(viewer,energy, helper);
            break;
