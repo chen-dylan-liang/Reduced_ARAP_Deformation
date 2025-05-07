@@ -16,7 +16,7 @@
 #include <Eigen/CholmodSupport>
 #include <Eigen/SparseCholesky>
 #include <set>
-
+#include <chrono>
 class LocalGlobalEnergy{
     public:
         double operator()(const MatrixXd& res){

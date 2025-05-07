@@ -34,7 +34,7 @@ int main(int argc, const char * argv[]) {
     bool show_texture=false;
     string texture_name;
     double lambda=0;
-    double g = 0.0;
+    double g = 5.0;
     double mass = 1e-4;
     double dt = 0.1;
     string slamda="0";
@@ -50,10 +50,11 @@ int main(int argc, const char * argv[]) {
             Vector3d(0,y_step,0), Vector3d(x_step,y_step,0), Vector3d(2*x_step,y_step,0),
     };
     method=ARAP;
-    energy_vec.push_back(new LocalGlobalEnergy(input_name,  method, lambda, mass, g,dt, Vector3d(0,0,0)));
+   energy_vec.push_back(new LocalGlobalEnergy(input_name,  method, lambda, mass, g, dt, Vector3d(0,0,0)));
     for(int i=0;i<5;i++){
-        energy_vec.push_back(new ReducedLocalGlobalEnergy(input_name,  method, lambda, mass, g, dt, offsets[i],resolutions[i]));
+        energy_vec.push_back(new ReducedLocalGlobalEnergy(input_name,  method, lambda, mass, g, dt, offsets[i],resolutions[i],false));
     }
+    printf("vert num=%d",energy_vec[0]->vert_size());
     global_res.resize(6*energy_vec[0]->vert_size(),3);
     global_face.resize(6*energy_vec[0]->get_faces().rows(),3);
     int verts_num = energy_vec[0]->vert_size();

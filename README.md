@@ -5,12 +5,11 @@
 - Dependencies: Eigen3, igl(No core algorithms about ARAP are used. igl is only used for user interaction and flip avoid line searching.), system-wide OpenGL, system-wide GLFW3, system-wide OpenCV, generated glad (https://glad.dav1d.de/, select opengl 4.1, core, loader).
 - Some code for user interaction (in call_back.h) adapted from https://github.com/alecjacobson/geometry-processing-deformation
 - image.h and image.cpp adapted from http://10.76.1.181/courses/training/mitF04/assignments/
-- Arguments for parameterization are like: '-function PARAM -input bunny.obj -iterations 4 -method Hybrid 1e-6 -print_pic -print_vtkfile -print_each_frame'
-- Arguments for deformation are like: '-function DEFORM -input bunny.obj -inf_itr'
+- Arguments for deformation are like: '-input ./mesh/bunny_1k.obj -inf_itr'
 - A strict disk-like manifold check is not included. Please be sure that the input is disk-like so that results are reasonable for PARAM.
 - User interactions when deformation: 
 	- mouse left: select anchor points
 	- mouse drag: deform interactively
-	- press ' ': change between anchor selection mode and deformation mode
-	- press 'u': single update
-	- press 'g': print deformed .obj file
+	- press ' ':  enter simulation mode
+	- press '1': enter point selection mode
+	- press '2': enter region selection mode
